@@ -31,13 +31,13 @@ app.post("/api/populate", async (req, res) => {
       throw new Error("Email is missing");
     }
 
-    const user = await Xata.db.user.filter({ email }).getFirst();
-    await user.update({
+    const student = await Xata.db.student.filter({ email }).getFirst();
+    await student.update({
       populating: true,
     });
     console.log("Started populating", email);
     await populate(authHeader, email);
-    await user.update({
+    await student.update({
       populating: false,
       last_populated_at: new Date(),
     });
