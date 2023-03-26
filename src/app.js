@@ -35,16 +35,19 @@ app.post("/api/populate", async (req, res) => {
     await user.update({
       populating: true,
     });
+    console.log("Started populating", email);
     await populate(authHeader, email);
     await user.update({
       populating: false,
       last_populated_at: new Date(),
     });
+    console.log("Finished populating", email);
 
     res.json({
       ok: true,
     });
   } catch (error) {
+    console.error(error);
     res.json({
       error: error.message,
     });
