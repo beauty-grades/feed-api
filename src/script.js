@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 
 import { Clase, Classroom, Course, Curriculum, Enrollment, Evaluation, Level, Level_Course, Period, Score, Student, Student_Curriculum, Teacher, } from "./classes.js";
 import { getXataClient } from "./xata.js";
+
 export const populate = async (auth_token, email) => {
     const Xata = getXataClient();
     // 1st level objects
