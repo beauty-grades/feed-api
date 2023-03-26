@@ -1,0 +1,7 @@
+{
+  "databaseURL": "https://beauty-grades-jbc8sn.us-east-1.xata.sh/db/bg4utec",
+  "codegen": {
+    "output": "src/xata.js",
+    "moduleType": "esm"
+  }
+}
