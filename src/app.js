@@ -19,9 +19,29 @@ app.use(
 
 app.use(bodyParser.json());
 
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+app.get("/api/curriculums", async (req, res) => {
+  try {
+    const Xata = getXataClient();
+    const curriculums = await Xata.db.curriculum.getAll()
+    res.json({
+      ok: true,
+      curriculums,
+    });
+  } catch (error) {
+    console.error(error);
+    res.json({
+      error: error.message,
+    });
+  }
+});
+
 app.post("/api/populate", async (req, res) => {
   try {
-    const Xata = getXataClient;
+    const Xata = getXataClient();
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       throw new Error("Authorization header is missing");
