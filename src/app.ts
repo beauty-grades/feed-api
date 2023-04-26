@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 
-import Xata from "./lib/xata/index.js";
+import Xata from "./lib/xata";
 
 import { populate } from "./lib/utec-api/populate";
 import { getEmail } from "./lib/utec-api/get-email";

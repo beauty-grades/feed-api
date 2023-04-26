@@ -1,8 +1,8 @@
 {
-  "name": "populate-beauty-grades-api",
+  "name": "bg-feed-api",
   "version": "1.0.0",
   "description": "",
-  "main": "src/app.js",
+  "main": "src/app.ts",
   "type": "module",
   "scripts": {
     "build": "tsc -p .",
