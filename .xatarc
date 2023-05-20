@@ -1,5 +1,5 @@
 {
-  "databaseURL": "https://beauty-grades-jbc8sn.us-east-1.xata.sh/db/bg4utec",
+  "databaseURL": "https://coollege-jbc8sn.us-east-1.xata.sh/db/utec",
   "codegen": {
     "output": "src/lib/xata/codegen.ts"
   }

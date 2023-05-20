@@ -1,5 +1,5 @@
-import { ExecuteParallel2NExtremes } from "../../../lib/utils/execute-parallel/2n-extremes"
-import { ExecuteParallelN } from "../../../lib/utils/execute-parallel/n"
+import { ExecuteParallel2NExtremes } from "./execute-parallel/2n-extremes"
+import { ExecuteParallelN } from "./execute-parallel/n"
 
 /**
  * Executes a given callback function on an array of data in parallel, dividing the array into smaller arrays
@@ -10,7 +10,7 @@ import { ExecuteParallelN } from "../../../lib/utils/execute-parallel/n"
  */
 export const CustomExecuteParallel = async (
   array: any[],
-  callback: (id: any) => Promise<any>
+  callback: (args: any) => Promise<any>
 ) => {
   const to_execute_sequentially = array.slice(-3).reverse()
 

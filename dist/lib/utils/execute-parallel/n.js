@@ -18,7 +18,7 @@ export const ExecuteParallelN = async (n, array, callback) => {
         }
         // If there are still items left in the array, execute the callback function on each item in the smaller array in parallel
         else {
-            await Promise.all(to_fetch.map((id) => callback(id)));
+            await Promise.all(to_fetch.map((args) => callback(args)));
             i += 1;
         }
     }

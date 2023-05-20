@@ -1,111 +1,260 @@
 import express from "express";
-import cors from "cors";
 import bodyParser from "body-parser";
-import Xata from "./lib/xata/index.js";
-import { populate } from "./lib/utec-api/populate";
-import { getEmail } from "./lib/utec-api/get-email";
+import Xata from "./lib/xata";
+import { MetadataClient } from "./lib/utec-api/clients/metadata";
+import { CurriculumClient } from "./lib/utec-api/clients/curriculum";
+import { PeriodClient } from "./lib/utec-api/clients/period";
+import { fetchPeriods } from "./lib/utec-api/fetch-periods";
+import { getStudent } from "./lib/utec-api/fetch-student";
+import { CustomExecuteParallel } from "./lib/utils/custom-execute-parallel";
 const app = express();
 const port = process.env.PORT || 8080;
-app.use(cors({
+/* app.use(
+  cors({
     origin: [
-        "https://beauty-grades.vercel.app",
-        "https://sistema-academico.utec.edu.pe",
+      "https://beauty-grades.vercel.app",
+      "https://sistema-academico.utec.edu.pe"
     ],
-}));
+  })
+);
+ */
 app.use(bodyParser.json());
-app.get("/", (req, res) => {
-    res.send("Hello World!");
-});
-app.post("/api/schedule", async (req, res) => {
+app.get("/api/test-grades", async (req, res) => { });
+app.post("/api/feed", async (req, res) => {
+    const utec_token_v1 = req.body.tokenV1;
+    const utec_token_v2 = req.body.tokenV2;
+    let local_student = null;
     try {
-        const tokenV1 = req.body.tokenV1;
-        const tokenV2 = req.body.tokenV2;
-        if (!tokenV1) {
-            throw new Error("tokenV1 is missing");
-        }
-        if (!tokenV2) {
-            throw new Error("tokenV2 is missing");
-        }
-        const email = await getEmail(tokenV2);
-        if (!email) {
-            throw new Error("Email not found. Wrong utec_token_v2.");
-        }
-        const student = await Xata.db.student.filter({ email }).getFirst();
-        if (!student) {
-            await Xata.db.student.create({
-                email,
-                utec_token_v1: tokenV1,
-                utec_token_v2: tokenV2,
-                last_token_stored_at: new Date(),
-            });
-        }
-        else {
-            await student.update({
-                utec_token_v1: tokenV1,
-                utec_token_v2: tokenV2,
-                last_token_stored_at: new Date(),
-            });
-        }
-        res.status(200).json({
-            ok: true,
-        });
-    }
-    catch (error) {
-        console.error(error);
-        res.json({
-            error: error.message,
-        });
-    }
-});
-app.get("/api/curriculums", async (req, res) => {
-    try {
-        const curriculums = await Xata.db.curriculum.getAll();
-        res.json({
-            ok: true,
-            curriculums,
-        });
-    }
-    catch (error) {
-        console.error(error);
-        res.json({
-            error: error.message,
-        });
-    }
-});
-app.post("/api/populate", async (req, res) => {
-    try {
-        const utec_token_v1 = req.body.utec_token_v1;
-        const utec_token_v2 = req.body.utec_token_v2;
         if (!utec_token_v1) {
-            throw new Error("utec_token_v1 is missing");
+            throw new Error("Bad Request: tokenV1 is missing");
         }
         if (!utec_token_v2) {
-            throw new Error("utec_token_v2 is missing");
+            throw new Error("Bad Request: tokenV2 is missing");
         }
-        const email = await getEmail(utec_token_v2);
-        if (!email) {
-            throw new Error("Email not found. Wrong utec_token_v2.");
-        }
-        const student = await Xata.db.student.filter({ email }).getFirst();
-        await student.update({
-            populating: true,
-        });
-        console.log("Started populating", email);
-        await populate(utec_token_v1, email);
-        await student.update({
-            populating: false,
-            last_populated_at: new Date(),
-        });
-        console.log("Finished populating", email);
-        res.json({
-            ok: true,
-        });
+        local_student = await getStudent({ utec_token_v2 });
+        res
+            .status(200)
+            .json(`Hey ${local_student.first_name}! We are working on your grades. Please wait a few. We will notify you at ${local_student.email} when we finish.`);
     }
     catch (error) {
-        console.error(error);
-        res.json({
+        let status = 500;
+        if (error.message.includes("Bad Request")) {
+            status = 400;
+        }
+        else if (error.message.includes("Unauthorized")) {
+            status = 401;
+        }
+        else if (error.message.includes("Forbidden")) {
+            status = 403;
+        }
+        else if (error.message.includes("Not Found")) {
+            status = 404;
+        }
+        res.status(status).json({
             error: error.message,
         });
+        return;
+    }
+    try {
+        const current_period_id = process.env.CURRENT_PERIOD_ID;
+        // Metadata thing
+        const metadata_client = new MetadataClient({
+            utec_token_v1,
+        });
+        await metadata_client.init();
+        const last_period_enrolled = metadata_client.last_period;
+        const meta_last_period = metadata_client.periods.get(last_period_enrolled);
+        let career = await Xata.db.career
+            .filter({ name: meta_last_period.career })
+            .getFirst();
+        if (!career) {
+            career = await Xata.db.career.create({
+                id: meta_last_period.curriculum.split("-")[0],
+                name: meta_last_period.career,
+            });
+        }
+        // Curriculum thing
+        const curriculum_client = new CurriculumClient({
+            utec_token_v1,
+            curriculum_id: meta_last_period.curriculum,
+        });
+        await curriculum_client.init();
+        let existing_student = true;
+        let utec_account = await Xata.db.utec_account.read(local_student.utec_id);
+        if (!utec_account) {
+            existing_student = false;
+            utec_account = await Xata.db.utec_account.create({
+                id: local_student.utec_id,
+                email: local_student.email,
+                score: local_student.score,
+                merit_order: local_student.order_merit,
+                curriculum: meta_last_period.curriculum,
+            });
+        }
+        // Periods thing
+        const periods = await fetchPeriods({ utec_token_v1 });
+        const handlePeriod = async ({ period_id, period_utec_id, }) => {
+            let period_enrollment_existed = true;
+            let period_enrollment = await Xata.db.period_enrollment.read(`${period_id}-${utec_account.id}`);
+            if (!period_enrollment) {
+                period_enrollment_existed = false;
+            }
+            else if (period_id !== current_period_id) {
+                return;
+            }
+            const meta_period = metadata_client.periods.get(period_id);
+            const period_client = new PeriodClient({
+                utec_token_v1,
+                period_id,
+                period_utec_id,
+            });
+            await period_client.init();
+            if (!period_enrollment_existed) {
+                if (meta_period.curriculum !== meta_last_period.curriculum) {
+                    let other_career = await Xata.db.career
+                        .filter({ name: meta_period.career })
+                        .getFirst();
+                    if (!other_career) {
+                        career = await Xata.db.career.create({
+                            id: meta_period.curriculum.split("-")[0],
+                            name: meta_period.career,
+                        });
+                    }
+                    const other_curriculum_client = new CurriculumClient({
+                        utec_token_v1,
+                        curriculum_id: meta_period.curriculum,
+                    });
+                    await other_curriculum_client.init();
+                }
+                let rel_career_period = await Xata.db.rel_career_period.read(`${meta_period.curriculum.split("-")[0]}-${period_id}`);
+                if (!rel_career_period) {
+                    rel_career_period = await Xata.db.rel_career_period.create({
+                        id: `${meta_period.curriculum.split("-")[0]}-${period_id}`,
+                        career: meta_period.curriculum.split("-")[0],
+                        period: period_id,
+                        enrolled_students: meta_period.total_students,
+                    });
+                }
+                period_enrollment = await Xata.db.period_enrollment.create({
+                    id: `${period_id}-${utec_account.id}`,
+                    period: period_id,
+                    utec_account: utec_account.id,
+                    merit_order: meta_period.merit_order,
+                    curriculum: meta_period.curriculum,
+                    score: meta_period.score,
+                });
+            }
+            else {
+                await Xata.db.period_enrollment.update(`${period_id}-${utec_account.id}`, {
+                    merit_order: meta_period.merit_order,
+                    score: meta_period.score,
+                });
+            }
+            await Promise.all([...period_client.courses].map(async ([course_id, course_period]) => {
+                let evaluations_existed = true;
+                let course_existed = true;
+                let class_existed = true;
+                let grades_existed = true;
+                let section_enrollment_existed = true;
+                let some_evaluation_id = [...course_period.evaluations][0][0];
+                let some_evaluation = await Xata.db.evaluation.read(`${course_id}-${period_id}-${some_evaluation_id}`);
+                if (!some_evaluation) {
+                    evaluations_existed = false;
+                    grades_existed = false;
+                }
+                else {
+                    const some_grade = await Xata.db.grade.read(`${course_id}-${period_id}-${some_evaluation_id}-${utec_account.id}`);
+                    if (!some_grade) {
+                        grades_existed = false;
+                    }
+                }
+                if (!evaluations_existed) {
+                    let course = await Xata.db.course.read(course_id);
+                    if (!course) {
+                        course_existed = false;
+                        course = await Xata.db.course.create({
+                            id: course_id,
+                            name: course_period.name,
+                        });
+                    }
+                    let _class = await Xata.db.class.read(`${course_id}-${period_id}`);
+                    if (!_class) {
+                        class_existed = false;
+                        _class = await Xata.db.class.create({
+                            id: `${course_id}-${period_id}`,
+                            course: course.id,
+                            period: period_id,
+                        });
+                    }
+                }
+                let teacher = await Xata.db.teacher
+                    .filter({ name: course_period.teacher })
+                    .getFirst();
+                if (!teacher) {
+                    teacher = await Xata.db.teacher.create({
+                        name: course_period.teacher,
+                    });
+                }
+                const course_curriculum = curriculum_client.courses.get(course_id);
+                let section_enrollment = await Xata.db.section_enrollment.read(`${course_id}-${period_id}-${utec_account.id}`);
+                if (!section_enrollment) {
+                    section_enrollment_existed = false;
+                    if (!class_existed) {
+                        let section = await Xata.db.section.read(`${course_id}-${period_id}-${course_period.section}`);
+                        if (!section) {
+                            section = await Xata.db.section.create({
+                                id: `${course_id}-${period_id}-${course_period.section}`,
+                                section: course_period.section,
+                                teacher: teacher.id,
+                                score: course_curriculum?.classroom_score,
+                            });
+                        }
+                    }
+                    section_enrollment = await Xata.db.section_enrollment.create({
+                        id: `${course_id}-${period_id}-${utec_account.id}`,
+                        period_enrollment: `${period_id}-${utec_account.id}`,
+                        section: `${course_id}-${period_id}-${course_period.section}`,
+                        score: course_period.score,
+                        dropped_out: course_period.dropped_out,
+                        elective: curriculum_client.electives.has(course_period.name),
+                    });
+                }
+                await Promise.all([...course_period.evaluations].map(async ([evaluation_id, raw_evaluation]) => {
+                    if (!evaluations_existed) {
+                        await Xata.db.evaluation.create({
+                            id: `${course_id}-${period_id}-${evaluation_id}`,
+                            handle: evaluation_id,
+                            label: raw_evaluation.label,
+                            weight: raw_evaluation.weight,
+                            can_be_deleted: raw_evaluation.can_be_deleted,
+                            class: `${course_id}-${period_id}`,
+                        });
+                    }
+                    if (!grades_existed) {
+                        await Xata.db.grade.create({
+                            id: `${course_id}-${period_id}-${evaluation_id}-${utec_account.id}`,
+                            evaluation: `${course_id}-${period_id}-${evaluation_id}`,
+                            section_enrollment: `${course_id}-${period_id}-${utec_account.id}`,
+                            score: raw_evaluation.score,
+                        });
+                    }
+                    else {
+                        await Xata.db.grade.update(`${course_id}-${period_id}-${evaluation_id}-${utec_account.id}`, {
+                            score: raw_evaluation.score,
+                        });
+                    }
+                }));
+            }));
+        };
+        await CustomExecuteParallel(periods, async ({ utec_id, id }) => await handlePeriod({ period_id: id, period_utec_id: utec_id }));
+        utec_account.update({
+            first_period: metadata_client.first_period,
+            last_period: metadata_client.last_period,
+        });
+        console.log("Done");
+    }
+    catch (error) {
+        console.log(error);
     }
 });
 app.listen(port, () => {

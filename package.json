@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p .",
-    "start": "npm run build && node --require=dotenv/config --loader=./loader.js dist/app"
+    "start": "npm run build && node --require=dotenv/config --loader=./loader.js dist/app --trace-warnings"
   },
   "keywords": [],
   "author": "",

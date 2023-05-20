@@ -12,20 +12,20 @@ export const ExecuteParallelN = async (
   array: any[],
   callback: (id: any) => Promise<any>
 ) => {
-  let i = 0
+  let i = 0;
 
   // Loop through the array and divide it into smaller arrays of size `n`
   while (true) {
-    const to_fetch = array.slice(i * n, i * n + n)
+    const to_fetch = array.slice(i * n, i * n + n);
 
     // If there are no more items left in the array, break out of the loop
     if (to_fetch.length === 0) {
-      break
+      break;
     }
     // If there are still items left in the array, execute the callback function on each item in the smaller array in parallel
     else {
-      await Promise.all(to_fetch.map((id) => callback(id)))
-      i += 1
+      await Promise.all(to_fetch.map((args) => callback(args)));
+      i += 1;
     }
   }
-}
+};

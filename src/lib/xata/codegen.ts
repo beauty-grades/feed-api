@@ -7,54 +7,10 @@ import type {
 } from "@xata.io/client";
 
 const tables = [
-  {
-    name: "student",
-    columns: [
-      { name: "email", type: "string", unique: true },
-      { name: "utec_token_v1", type: "string" },
-      { name: "last_populated_at", type: "datetime" },
-      { name: "last_token_stored_at", type: "datetime" },
-      { name: "populating", type: "bool" },
-      { name: "utec_token_v2", type: "string" },
-    ],
-  },
-  {
-    name: "course",
-    columns: [
-      {
-        name: "name",
-        type: "string",
-        notNull: true,
-        defaultValue: "Frontend Engineering Fundamentals",
-      },
-      { name: "handle", type: "string", unique: true },
-    ],
-  },
-  {
-    name: "teacher",
-    columns: [
-      {
-        name: "first_name",
-        type: "string",
-        notNull: true,
-        defaultValue: "Bad",
-      },
-      {
-        name: "last_name",
-        type: "string",
-        notNull: true,
-        defaultValue: "Bunny",
-      },
-    ],
-  },
-  {
-    name: "curriculum",
-    columns: [{ name: "handle", type: "string", unique: true }],
-  },
-  {
-    name: "period",
-    columns: [{ name: "handle", type: "string", unique: true }],
-  },
+  { name: "career", columns: [{ name: "name", type: "string", unique: true }] },
+  { name: "course", columns: [{ name: "name", type: "string" }] },
+  { name: "teacher", columns: [{ name: "name", type: "string" }] },
+  { name: "period", columns: [{ name: "utec_id", type: "int", unique: true }] },
   {
     name: "class",
     columns: [
@@ -64,10 +20,27 @@ const tables = [
     ],
   },
   {
-    name: "student_curriculum",
+    name: "curriculum",
     columns: [
-      { name: "student", type: "link", link: { table: "student" } },
-      { name: "curriculum", type: "link", link: { table: "curriculum" } },
+      { name: "career", type: "link", link: { table: "career" } },
+      { name: "utec_id", type: "int", unique: true },
+    ],
+  },
+  {
+    name: "rel_career_period",
+    columns: [
+      { name: "career", type: "link", link: { table: "career" } },
+      { name: "period", type: "link", link: { table: "period" } },
+      { name: "enrolled_students", type: "int" },
+    ],
+  },
+  {
+    name: "section",
+    columns: [
+      { name: "teacher", type: "link", link: { table: "teacher" } },
+      { name: "class", type: "link", link: { table: "class" } },
+      { name: "score", type: "float" },
+      { name: "section", type: "int" },
     ],
   },
   {
@@ -79,25 +52,22 @@ const tables = [
     ],
   },
   {
-    name: "level_course",
+    name: "utec_account",
     columns: [
-      { name: "level", type: "link", link: { table: "level" } },
-      { name: "course", type: "link", link: { table: "course" } },
-      { name: "credits", type: "float" },
-    ],
-  },
-  {
-    name: "classroom",
-    columns: [
-      { name: "teacher", type: "link", link: { table: "teacher" } },
-      { name: "class", type: "link", link: { table: "class" } },
+      { name: "email", type: "email", unique: true },
+      { name: "curriculum", type: "link", link: { table: "curriculum" } },
+      { name: "first_period", type: "link", link: { table: "period" } },
+      { name: "last_period", type: "link", link: { table: "period" } },
       { name: "score", type: "float" },
-      { name: "section", type: "int" },
+      { name: "merit_order", type: "int" },
+      { name: "ranking", type: "int" },
     ],
   },
   {
     name: "evaluation",
     columns: [
+      { name: "handle", type: "string" },
+      { name: "label", type: "string" },
       { name: "class", type: "link", link: { table: "class" } },
       {
         name: "can_be_deleted",
@@ -106,16 +76,36 @@ const tables = [
         defaultValue: "false",
       },
       { name: "weight", type: "float" },
-      { name: "label", type: "string" },
-      { name: "handle", type: "string" },
     ],
   },
   {
-    name: "enrollment",
+    name: "rel_level_course",
     columns: [
-      { name: "student", type: "link", link: { table: "student" } },
-      { name: "classroom", type: "link", link: { table: "classroom" } },
-      { name: "final_score", type: "float" },
+      { name: "level", type: "link", link: { table: "level" } },
+      { name: "course", type: "link", link: { table: "course" } },
+      { name: "credits", type: "float" },
+    ],
+  },
+  {
+    name: "period_enrollment",
+    columns: [
+      { name: "period", type: "link", link: { table: "period" } },
+      { name: "utec_account", type: "link", link: { table: "utec_account" } },
+      { name: "curriculum", type: "link", link: { table: "curriculum" } },
+      { name: "score", type: "float" },
+      { name: "merit_order", type: "int" },
+    ],
+  },
+  {
+    name: "section_enrollment",
+    columns: [
+      {
+        name: "period_enrollment",
+        type: "link",
+        link: { table: "period_enrollment" },
+      },
+      { name: "section", type: "link", link: { table: "section" } },
+      { name: "score", type: "float" },
       {
         name: "dropped_out",
         type: "bool",
@@ -123,14 +113,28 @@ const tables = [
         defaultValue: "false",
       },
       { name: "elective", type: "bool", notNull: true, defaultValue: "false" },
+      { name: "elective_order", type: "int" },
     ],
   },
   {
     name: "grade",
     columns: [
-      { name: "enrollment", type: "link", link: { table: "enrollment" } },
+      {
+        name: "section_enrollment",
+        type: "link",
+        link: { table: "section_enrollment" },
+      },
       { name: "evaluation", type: "link", link: { table: "evaluation" } },
       { name: "score", type: "float" },
+    ],
+  },
+  {
+    name: "profile",
+    columns: [
+      { name: "email", type: "email", unique: true },
+      { name: "handle", type: "string", unique: true },
+      { name: "name", type: "string" },
+      { name: "bio", type: "string" },
     ],
   },
   {
@@ -203,8 +207,8 @@ const tables = [
 export type SchemaTables = typeof tables;
 export type InferredTypes = SchemaInference<SchemaTables>;
 
-export type Student = InferredTypes["student"];
-export type StudentRecord = Student & XataRecord;
+export type Career = InferredTypes["career"];
+export type CareerRecord = Career & XataRecord;
 
 export type Course = InferredTypes["course"];
 export type CourseRecord = Course & XataRecord;
@@ -212,35 +216,44 @@ export type CourseRecord = Course & XataRecord;
 export type Teacher = InferredTypes["teacher"];
 export type TeacherRecord = Teacher & XataRecord;
 
-export type Curriculum = InferredTypes["curriculum"];
-export type CurriculumRecord = Curriculum & XataRecord;
-
 export type Period = InferredTypes["period"];
 export type PeriodRecord = Period & XataRecord;
 
 export type Class = InferredTypes["class"];
 export type ClassRecord = Class & XataRecord;
 
-export type StudentCurriculum = InferredTypes["student_curriculum"];
-export type StudentCurriculumRecord = StudentCurriculum & XataRecord;
+export type Curriculum = InferredTypes["curriculum"];
+export type CurriculumRecord = Curriculum & XataRecord;
+
+export type RelCareerPeriod = InferredTypes["rel_career_period"];
+export type RelCareerPeriodRecord = RelCareerPeriod & XataRecord;
+
+export type Section = InferredTypes["section"];
+export type SectionRecord = Section & XataRecord;
 
 export type Level = InferredTypes["level"];
 export type LevelRecord = Level & XataRecord;
 
-export type LevelCourse = InferredTypes["level_course"];
-export type LevelCourseRecord = LevelCourse & XataRecord;
-
-export type Classroom = InferredTypes["classroom"];
-export type ClassroomRecord = Classroom & XataRecord;
+export type UtecAccount = InferredTypes["utec_account"];
+export type UtecAccountRecord = UtecAccount & XataRecord;
 
 export type Evaluation = InferredTypes["evaluation"];
 export type EvaluationRecord = Evaluation & XataRecord;
 
-export type Enrollment = InferredTypes["enrollment"];
-export type EnrollmentRecord = Enrollment & XataRecord;
+export type RelLevelCourse = InferredTypes["rel_level_course"];
+export type RelLevelCourseRecord = RelLevelCourse & XataRecord;
+
+export type PeriodEnrollment = InferredTypes["period_enrollment"];
+export type PeriodEnrollmentRecord = PeriodEnrollment & XataRecord;
+
+export type SectionEnrollment = InferredTypes["section_enrollment"];
+export type SectionEnrollmentRecord = SectionEnrollment & XataRecord;
 
 export type Grade = InferredTypes["grade"];
 export type GradeRecord = Grade & XataRecord;
+
+export type Profile = InferredTypes["profile"];
+export type ProfileRecord = Profile & XataRecord;
 
 export type NextauthUsers = InferredTypes["nextauth_users"];
 export type NextauthUsersRecord = NextauthUsers & XataRecord;
@@ -263,19 +276,22 @@ export type NextauthSessions = InferredTypes["nextauth_sessions"];
 export type NextauthSessionsRecord = NextauthSessions & XataRecord;
 
 export type DatabaseSchema = {
-  student: StudentRecord;
+  career: CareerRecord;
   course: CourseRecord;
   teacher: TeacherRecord;
-  curriculum: CurriculumRecord;
   period: PeriodRecord;
   class: ClassRecord;
-  student_curriculum: StudentCurriculumRecord;
+  curriculum: CurriculumRecord;
+  rel_career_period: RelCareerPeriodRecord;
+  section: SectionRecord;
   level: LevelRecord;
-  level_course: LevelCourseRecord;
-  classroom: ClassroomRecord;
+  utec_account: UtecAccountRecord;
   evaluation: EvaluationRecord;
-  enrollment: EnrollmentRecord;
+  rel_level_course: RelLevelCourseRecord;
+  period_enrollment: PeriodEnrollmentRecord;
+  section_enrollment: SectionEnrollmentRecord;
   grade: GradeRecord;
+  profile: ProfileRecord;
   nextauth_users: NextauthUsersRecord;
   nextauth_accounts: NextauthAccountsRecord;
   nextauth_verificationTokens: NextauthVerificationTokensRecord;
@@ -287,7 +303,7 @@ export type DatabaseSchema = {
 const DatabaseClient = buildClient();
 
 const defaultOptions = {
-  databaseURL: "https://beauty-grades-jbc8sn.us-east-1.xata.sh/db/bg4utec",
+  databaseURL: "https://coollege-jbc8sn.us-east-1.xata.sh/db/utec",
 };
 
 export class XataClient extends DatabaseClient<DatabaseSchema> {
