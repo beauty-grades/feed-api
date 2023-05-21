@@ -196,7 +196,9 @@ app.post("/api/feed", async (req, res) => {
                     });
                 }
                 const course_curriculum = curriculum_client.courses.get(course_id);
-                const section_score = course_curriculum?.period === period_id && course_curriculum.sections_score;
+                const section_score = course_curriculum?.period === period_id
+                    ? course_curriculum?.sections_score || null
+                    : null;
                 let section_enrollment = await Xata.db.section_enrollment.read(`${course_id}-${period_id}-${utec_account.id}`);
                 if (!section_enrollment) {
                     section_enrollment_existed = false;

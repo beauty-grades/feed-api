@@ -253,7 +253,10 @@ app.post("/api/feed", async (req, res) => {
 
           const course_curriculum = curriculum_client.courses.get(course_id);
 
-          const section_score = course_curriculum?.period === period_id && course_curriculum.sections_score
+          const section_score: number | null =
+            course_curriculum?.period === period_id
+              ? course_curriculum?.sections_score || null
+              : null;
 
           let section_enrollment = await Xata.db.section_enrollment.read(
             `${course_id}-${period_id}-${utec_account.id}`
@@ -266,6 +269,7 @@ app.post("/api/feed", async (req, res) => {
               let section = await Xata.db.section.read(
                 `${course_id}-${period_id}-${course_period.section}`
               );
+
               if (!section) {
                 section = await Xata.db.section.create({
                   id: `${course_id}-${period_id}-${course_period.section}`,
@@ -273,6 +277,10 @@ app.post("/api/feed", async (req, res) => {
                   teacher: teacher.id,
                   score: section_score,
                   class: `${course_id}-${period_id}`,
+                });
+              } else if (section.score !== section_score) {
+                section.update({
+                  score: section_score,
                 });
               }
             }
