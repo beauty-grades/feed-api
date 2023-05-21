@@ -9,7 +9,7 @@ interface Course {
   level: string;
   credits: number;
   period?: string;
-  classroom_score?: number | null;
+  sections_score?: number | null;
 }
 
 interface Level {
@@ -91,7 +91,7 @@ export class CurriculumClient {
 
             if (summaryEnrolled.length > 0) {
               const { namePeriod, classroomAverage } = summaryEnrolled[0];
-              course["classroom_score"] = classroomAverage;
+              course["sections_score"] = classroomAverage;
               course["period"] = namePeriod.replace(/\s/g, "");
             }
 
