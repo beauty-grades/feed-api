@@ -293,6 +293,14 @@ app.post("/api/feed", async (req, res) => {
               dropped_out: course_period.dropped_out,
               elective: curriculum_client.electives.has(course_period.name),
             });
+          } else if (
+            section_enrollment.score !== course_period.score ||
+            section_enrollment.dropped_out !== course_period.dropped_out
+          ) {
+            section_enrollment.update({
+              score: course_period.score,
+              dropped_out: course_period.dropped_out,
+            });
           }
 
           await Promise.all(
