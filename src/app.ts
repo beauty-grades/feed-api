@@ -13,15 +13,12 @@ import { CustomExecuteParallel } from "./lib/utils/custom-execute-parallel";
 const app = express();
 const port = process.env.PORT || 8080;
 
-/* app.use(
+app.use(
   cors({
-    origin: [
-      "https://beauty-grades.vercel.app",
-      "https://sistema-academico.utec.edu.pe"
-    ],
+    origin: ["https://sistema-academico.utec.edu.pe"],
   })
 );
- */
+
 app.use(bodyParser.json());
 
 app.get("/api/test-grades", async (req, res) => {});

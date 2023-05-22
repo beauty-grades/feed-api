@@ -213,6 +213,11 @@ app.post("/api/feed", async (req, res) => {
                                 class: `${course_id}-${period_id}`,
                             });
                         }
+                        else if (section.score !== section_score) {
+                            section.update({
+                                score: section_score,
+                            });
+                        }
                     }
                     section_enrollment = await Xata.db.section_enrollment.create({
                         id: `${course_id}-${period_id}-${utec_account.id}`,
@@ -221,6 +226,13 @@ app.post("/api/feed", async (req, res) => {
                         score: course_period.score,
                         dropped_out: course_period.dropped_out,
                         elective: curriculum_client.electives.has(course_period.name),
+                    });
+                }
+                else if (section_enrollment.score !== course_period.score ||
+                    section_enrollment.dropped_out !== course_period.dropped_out) {
+                    section_enrollment.update({
+                        score: course_period.score,
+                        dropped_out: course_period.dropped_out,
                     });
                 }
                 await Promise.all([...course_period.evaluations].map(async ([evaluation_id, raw_evaluation]) => {
