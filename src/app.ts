@@ -310,6 +310,14 @@ app.post("/api/feed", async (req, res) => {
                   score: section_score,
                 });
               }
+            } else {
+              await Xata.db.section.create({
+                id: `${course_id}-${period_id}-${course_period.section}`,
+                section: course_period.section,
+                teacher: teacher.id,
+                score: section_score,
+                class: `${course_id}-${period_id}`,
+              });
             }
 
             section_enrollment = await Xata.db.section_enrollment.create({
