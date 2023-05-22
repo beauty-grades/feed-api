@@ -44,10 +44,42 @@ app.post("/api/feed", async (req, res) => {
 
     local_student = await getStudent({ utec_token_v2 });
 
+    let metadata_record = await Xata.db.metadata
+      .filter({
+        email: local_student.email,
+      })
+      .getFirst();
+
+    if (!metadata_record) {
+      metadata_record = await Xata.db.metadata.create({
+        email: local_student.email,
+        feeding: true,
+      });
+    } else {
+      if (metadata_record.feeding) {
+        res
+          .status(200)
+          .json(
+            "Hey! We are already feeding your information. Please wait a few minutes"
+          );
+        return;
+      } else if (
+        metadata_record.last_fed_at &&
+        new Date().getTime() - metadata_record.last_fed_at.getTime() <
+          1000 * 60 * 60 * 24 * 7
+      ) {
+        throw new Error("Forbidden: You can only feed once a week");
+      }
+
+      metadata_record.update({
+        feeding: true,
+      });
+    }
+
     res
       .status(200)
       .json(
-        `Hey ${local_student.first_name}! We are working on your grades. Please wait a few. We will notify you at ${local_student.email} when we finish.`
+        `Hey ${local_student.first_name}! We started feeding your information. Please wait a few minutes`
       );
   } catch (error) {
     let status = 500;
@@ -62,9 +94,7 @@ app.post("/api/feed", async (req, res) => {
       status = 404;
     }
 
-    res.status(status).json({
-      error: error.message,
-    });
+    res.status(status).json(error.message);
 
     return;
   }
@@ -346,6 +376,19 @@ app.post("/api/feed", async (req, res) => {
       first_period: metadata_client.first_period,
       last_period: metadata_client.last_period,
     });
+
+    const metadata_record = await Xata.db.metadata
+      .filter({
+        email: local_student.email,
+      })
+      .getFirst();
+
+    if (metadata_record) {
+      metadata_record.update({
+        last_fed_at: new Date(),
+        feeding: false,
+      });
+    }
 
     console.log("Done");
   } catch (error) {

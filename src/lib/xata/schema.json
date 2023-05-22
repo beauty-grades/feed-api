@@ -365,6 +365,26 @@
       ]
     },
     {
+      "name": "metadata",
+      "columns": [
+        {
+          "name": "email",
+          "type": "email",
+          "unique": true
+        },
+        {
+          "name": "feeding",
+          "type": "bool",
+          "notNull": true,
+          "defaultValue": "false"
+        },
+        {
+          "name": "last_fed_at",
+          "type": "datetime"
+        }
+      ]
+    },
+    {
       "name": "nextauth_users",
       "columns": [
         {

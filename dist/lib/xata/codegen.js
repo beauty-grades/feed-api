@@ -196,6 +196,14 @@ const tables = [
             { name: "user", type: "link", link: { table: "nextauth_users" } },
         ],
     },
+    {
+        name: "metadata",
+        columns: [
+            { name: "email", type: "email", unique: true },
+            { name: "feeding", type: "bool", notNull: true, defaultValue: "false" },
+            { name: "last_fed_at", type: "datetime" },
+        ],
+    },
 ];
 const DatabaseClient = buildClient();
 const defaultOptions = {
