@@ -265,6 +265,7 @@ app.post("/api/feed", async (req, res) => {
                 id: `${course_id}-${period_id}`,
                 course: course.id,
                 period: period_id,
+                wrong_formula: course_period.wrong_formula, 
               });
             }
           }
