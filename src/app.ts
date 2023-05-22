@@ -292,31 +292,21 @@ app.post("/api/feed", async (req, res) => {
           if (!section_enrollment) {
             section_enrollment_existed = false;
 
-            if (!class_existed) {
-              let section = await Xata.db.section.read(
-                `${course_id}-${period_id}-${course_period.section}`
-              );
+            let section = await Xata.db.section.read(
+              `${course_id}-${period_id}-${course_period.section}`
+            );
 
-              if (!section) {
-                section = await Xata.db.section.create({
-                  id: `${course_id}-${period_id}-${course_period.section}`,
-                  section: course_period.section,
-                  teacher: teacher.id,
-                  score: section_score,
-                  class: `${course_id}-${period_id}`,
-                });
-              } else if (section.score !== section_score) {
-                section.update({
-                  score: section_score,
-                });
-              }
-            } else {
-              await Xata.db.section.create({
+            if (!section) {
+              section = await Xata.db.section.create({
                 id: `${course_id}-${period_id}-${course_period.section}`,
                 section: course_period.section,
                 teacher: teacher.id,
                 score: section_score,
                 class: `${course_id}-${period_id}`,
+              });
+            } else if (section.score !== section_score) {
+              section.update({
+                score: section_score,
               });
             }
 
