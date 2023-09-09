@@ -11,10 +11,12 @@ import { CustomExecuteParallel } from "./lib/utils/custom-execute-parallel";
 const app = express();
 const port = process.env.PORT || 8080;
 app.use(cors({
-    origin: ["https://sistema-academico.utec.edu.pe"],
+    origin: [
+        "https://sistema-academico.utec.edu.pe",
+        "https://coollege.vercel.app",
+    ],
 }));
 app.use(bodyParser.json());
-app.get("/api/test-grades", async (req, res) => { });
 app.post("/api/feed", async (req, res) => {
     const utec_token_v1 = req.body.tokenV1;
     const utec_token_v2 = req.body.tokenV2;
@@ -204,6 +206,7 @@ app.post("/api/feed", async (req, res) => {
                             id: `${course_id}-${period_id}`,
                             course: course.id,
                             period: period_id,
+                            wrong_formula: course_period.wrong_formula,
                         });
                     }
                 }
@@ -222,22 +225,20 @@ app.post("/api/feed", async (req, res) => {
                 let section_enrollment = await Xata.db.section_enrollment.read(`${course_id}-${period_id}-${utec_account.id}`);
                 if (!section_enrollment) {
                     section_enrollment_existed = false;
-                    if (!class_existed) {
-                        let section = await Xata.db.section.read(`${course_id}-${period_id}-${course_period.section}`);
-                        if (!section) {
-                            section = await Xata.db.section.create({
-                                id: `${course_id}-${period_id}-${course_period.section}`,
-                                section: course_period.section,
-                                teacher: teacher.id,
-                                score: section_score,
-                                class: `${course_id}-${period_id}`,
-                            });
-                        }
-                        else if (section.score !== section_score) {
-                            section.update({
-                                score: section_score,
-                            });
-                        }
+                    let section = await Xata.db.section.read(`${course_id}-${period_id}-${course_period.section}`);
+                    if (!section) {
+                        section = await Xata.db.section.create({
+                            id: `${course_id}-${period_id}-${course_period.section}`,
+                            section: course_period.section,
+                            teacher: teacher.id,
+                            score: section_score,
+                            class: `${course_id}-${period_id}`,
+                        });
+                    }
+                    else if (section.score !== section_score) {
+                        section.update({
+                            score: section_score,
+                        });
                     }
                     section_enrollment = await Xata.db.section_enrollment.create({
                         id: `${course_id}-${period_id}-${utec_account.id}`,

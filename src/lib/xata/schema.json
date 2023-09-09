@@ -361,6 +361,26 @@
         {
           "name": "bio",
           "type": "string"
+        },
+        {
+          "name": "profile_picture",
+          "type": "string"
+        },
+        {
+          "name": "cover_picture",
+          "type": "string"
+        },
+        {
+          "name": "ig_handle",
+          "type": "string"
+        },
+        {
+          "name": "tw_handle",
+          "type": "string"
+        },
+        {
+          "name": "gh_handle",
+          "type": "string"
         }
       ]
     },

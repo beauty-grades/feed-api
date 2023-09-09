@@ -15,13 +15,14 @@ const port = process.env.PORT || 8080;
 
 app.use(
   cors({
-    origin: ["https://sistema-academico.utec.edu.pe"],
+    origin: [
+      "https://sistema-academico.utec.edu.pe",
+      "https://coollege.vercel.app",
+    ],
   })
 );
 
 app.use(bodyParser.json());
-
-app.get("/api/test-grades", async (req, res) => {});
 
 app.post("/api/feed", async (req, res) => {
   const utec_token_v1 = req.body.tokenV1;
@@ -265,7 +266,7 @@ app.post("/api/feed", async (req, res) => {
                 id: `${course_id}-${period_id}`,
                 course: course.id,
                 period: period_id,
-                wrong_formula: course_period.wrong_formula, 
+                wrong_formula: course_period.wrong_formula,
               });
             }
           }
